@@ -1,0 +1,1343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b2340">
+<title>Chunk Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Old+Mincho:wght@600&display=swap">
+<style>
+/* Layout: one clip at a time, full-height card, thumb-zone buttons at the bottom */
+:root{
+  --bg:#eef0f5; --surface:#ffffff; --ink:#161b2e; --muted:#5d6480; --line:#d5d9e6;
+  --accent:#2f4fb5; --accent-ink:#ffffff; --good:#1f7a55; --bad:#b0412e; --mark:#f3d36b; --gram:#8a4fb0;
+  --jp:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --display:"Zen Old Mincho","Hiragino Mincho ProN","Noto Serif JP",serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1220; --surface:#181c2f; --ink:#e8eaf3; --muted:#9aa1bd; --line:#2a3050;
+  --accent:#8ea6ff; --accent-ink:#0f1220; --good:#5cc79a; --bad:#ef8a75; --mark:#6b5a1d; --gram:#d3a6f0; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1220; --surface:#181c2f; --ink:#e8eaf3; --muted:#9aa1bd; --line:#2a3050;
+  --accent:#8ea6ff; --accent-ink:#0f1220; --good:#5cc79a; --bad:#ef8a75; --mark:#6b5a1d; --gram:#d3a6f0; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--jp);font-size:15px;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:560px;margin:0 auto;height:100%;display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+header{display:flex;align-items:center;gap:10px;min-height:40px}
+.thread{flex:1;min-width:0;display:flex;flex-direction:column}
+.thread b{font-family:var(--display);font-size:20px;line-height:1.1}
+.thread span{font-size:12px;color:var(--muted);letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.count{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+.iconbtn{background:none;border:1px solid var(--line);border-radius:10px;width:40px;height:40px;display:grid;place-items:center}
+.stage{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;padding-block:12px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.stage>*{flex-shrink:0} /* never squash the card: let the page scroll instead */
+.stage>:first-child{margin-top:auto}.stage>:last-child{margin-bottom:auto}
+.stage .controls{position:sticky;bottom:0;z-index:2;background:var(--bg);padding-block:8px;margin-block:-8px}
+.shot{max-height:34vh}
+.stage.menuOpen>:first-child{margin-top:0}
+.menuBar{position:sticky;bottom:0;padding-block:10px;background:var(--surface);border-top:1px solid var(--line);margin:0 -20px -20px;padding-inline:20px;border-radius:0 0 18px 18px}
+.menuBar button{width:100%}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+.shot{position:relative;aspect-ratio:16/9;max-width:100%;width:100%;background:var(--line);overflow:hidden}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.src{position:absolute;left:10px;bottom:8px;right:10px;font-size:11px;color:#fff;text-shadow:0 1px 3px #000a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.why{position:absolute;top:8px;left:8px;font-size:11px;padding:3px 8px;border-radius:99px;background:#000a;color:#fff;letter-spacing:.03em}
+.body{padding:16px 16px 14px;display:flex;flex-direction:column;gap:12px}
+.jp{font-size:24px;line-height:1.9;word-break:break-all}
+.jp .t{border-radius:5px;padding:0 1px}
+.jp .ch{display:inline-block;cursor:pointer;border-radius:8px;padding:0 3px;margin:2px 1px;border-bottom:2px solid var(--line)}
+.jp .ch.fresh{border-bottom-color:var(--accent)}
+.jp .ch.hit{color:var(--accent);font-weight:700}
+.jp .ch.marked{background:var(--mark)}
+.jp .t.c{cursor:pointer;border-bottom:1px dotted transparent}
+.jp .t.hit{color:var(--accent);font-weight:700}
+.jp .t.marked{background:var(--mark)}
+.jp rt{font-size:11px;color:var(--muted)}
+.gloss{min-height:20px;font-size:13px;color:var(--muted)}
+.gloss a{color:var(--accent)}
+.explain{display:flex;flex-direction:column;gap:4px;font-size:14px;border-left:3px solid var(--accent);padding:2px 0 2px 10px}
+.explain b{font-weight:700}
+.explain span{color:var(--muted)}
+.roma{font-size:13px;color:var(--muted);letter-spacing:.02em;margin-top:-6px}
+.levels{display:flex;flex-direction:column;gap:8px}
+.levels button{text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.levels button span{font-size:12px;color:var(--muted)}
+.levels button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.en{font-size:14px;color:var(--muted);line-height:1.5}
+.reveal{align-self:flex-start;background:none;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--muted)}
+.controls{display:grid;grid-template-columns:1fr auto 1fr;gap:10px}
+.big{border:none;border-radius:14px;padding:16px 10px;font-size:16px;font-weight:700}
+.lost{background:var(--surface);border:1px solid var(--line);color:var(--bad)}
+.got{background:var(--accent);color:var(--accent-ink)}
+.replay{background:var(--surface);border:1px solid var(--line);border-radius:14px;width:58px}
+.hint{text-align:center;font-size:12px;color:var(--muted);min-height:16px}
+.flag{background:none;border:none;padding:4px 2px;font-size:12px;color:var(--muted);text-decoration:underline}
+.lit{font-size:15px;line-height:1.5;color:var(--ink)}
+.en{font-size:13px}
+.row2{display:flex;gap:8px;flex-wrap:wrap}
+.scene{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.scLine{display:flex;flex-direction:column;gap:2px;text-align:left;background:none;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.scLine.main{border-color:var(--accent)}
+.scLine small{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.scLine span{font-size:17px;line-height:1.5}
+.scLine em{font-style:normal;font-size:12px;color:var(--muted)}
+.bdBtn{background:none;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--muted)}
+.breakdown{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.bdRow{display:grid;grid-template-columns:auto 1fr;column-gap:10px;row-gap:2px;align-items:baseline}
+.bdRow b{font-size:17px;font-weight:500}
+.bdRow span{font-size:13px;color:var(--ink);min-width:0}
+.bdRow small{grid-column:1/-1;font-size:12px;color:var(--muted);line-height:1.45}
+.bdRow.k-grammar b,.jp .ch.k-grammar{color:var(--gram)}
+.jp .ch.k-grammar{border-bottom-style:dotted}
+.jp .ch.hasNote{position:relative}
+.jp .ch.hasNote::after{content:"";position:absolute;top:2px;right:-1px;width:5px;height:5px;border-radius:50%;background:var(--gram)}
+.listen{display:flex;flex-direction:column;align-items:center;gap:14px;padding:36px 16px}
+.playbig{width:96px;height:96px;border-radius:50%;border:none;background:var(--accent);color:var(--accent-ink);font-size:34px}
+.showtext{align-self:center;background:none;border:1px dashed var(--line);border-radius:8px;padding:8px 14px;font-size:14px;color:var(--muted)}
+.lit.wait span{color:var(--muted);font-style:italic}
+.lit b{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-right:4px}
+.mt{font-size:11px;padding:1px 6px;border:1px solid var(--line);border-radius:99px;white-space:nowrap}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.panel h1{font-family:var(--display);font-size:28px;margin:0;text-wrap:balance}
+.panel h2{font-size:13px;margin:6px 0 0;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.panel p{margin:0;line-height:1.6;color:var(--muted)}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1;min-width:0}
+.ghost{background:none;border:1px solid var(--line);border-radius:12px;padding:12px}
+.danger{color:var(--bad)}
+.err{color:var(--bad);font-size:14px;line-height:1.5}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-variant-numeric:tabular-nums}
+.stats div{background:var(--bg);border-radius:12px;padding:10px;text-align:center}
+.stats b{display:block;font-size:20px}
+.stats span{font-size:11px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font-size:13px;padding:4px 9px;border-radius:99px;background:var(--bg);border:1px solid var(--line)}
+.chips span.weak{border-color:var(--bad)}
+.check{flex-direction:row;align-items:center;gap:10px;color:var(--ink)}
+.check input{width:20px;height:20px}
+.loading{text-align:center;color:var(--muted);padding:40px 0}
+@media (prefers-reduced-motion:no-preference){.card{animation:in .25s ease-out}@keyframes in{from{opacity:.4;transform:translateY(8px)}}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header id="hdr" hidden>
+    <div class="thread"><b id="focusLbl">猫</b><span id="stepLbl">Starting out</span></div>
+    <div class="count"><span id="todayN">0</span> today</div>
+    <button class="iconbtn" id="menuBtn" aria-label="Progress and settings">☰</button>
+  </header>
+
+  <main class="stage" id="stage"></main>
+</div>
+
+<template id="tplSetup">
+  <section class="panel">
+    <h1>Chunk Feed</h1>
+    <p>Pick a starting word. The feed grows from it one step at a time and quietly brings back what you're forgetting. Show up whenever you like.</p>
+    <label for="keyIn">Nadeshiko API key<input id="keyIn" autocomplete="off" placeholder="Paste your key"></label>
+    <p style="font-size:12px">Free from your account page on <a href="https://nadeshiko.co" target="_blank" rel="noopener" style="color:var(--accent)">nadeshiko.co</a>. It's only stored in this browser.</p>
+    <h2>Where are you starting?</h2>
+    <div class="levels" id="levelPick">
+      <button data-l="0" aria-pressed="true"><b>Brand new</b><span>Tiny clips, English and readings shown, explains each new piece</span></button>
+      <button data-l="1" aria-pressed="false"><b>I know the basics</b><span>Kana and a few hundred words, simple sentences</span></button>
+      <button data-l="2" aria-pressed="false"><b>Intermediate</b><span>Around N3: you follow some anime with help</span></button>
+    </div>
+    <label for="seedIn">Starting word<input id="seedIn" value="猫" lang="ja"></label>
+    <label class="check" for="romaIn0"><input type="checkbox" id="romaIn0">I can't read kana yet (show romaji)</label>
+    <div class="err" id="setupErr" hidden></div>
+    <button class="big got" id="startBtn">Start listening</button>
+    <p style="font-size:12px">No account. Your progress lives in this browser; use Copy progress in the menu to move it.</p>
+  </section>
+</template>
+
+<template id="tplMenu">
+  <section class="panel">
+    <div class="row" style="align-items:center"><h1 style="flex:3">Progress</h1><button class="ghost" id="closeMenu" style="flex:1">Back</button></div>
+    <div class="stats">
+      <div><b id="sKnown">0</b><span>known</span></div>
+      <div><b id="sWeak">0</b><span>fading</span></div>
+      <div><b id="sTotal">0</b><span>clips heard</span></div>
+    </div>
+    <p id="quotaLine" style="font-size:13px"></p>
+    <h2>Thread so far</h2><div class="chips" id="trail"></div>
+    <h2>Fading right now</h2><div class="chips" id="fading"></div>
+    <h2>Settings</h2>
+    <label class="check" for="audioIn"><input type="checkbox" id="audioIn">Audio only (text hidden until you tap Show text)</label>
+    <label class="check" for="explIn"><input type="checkbox" id="explIn">Show word explanations under the sentence</label>
+    <label class="check" for="furiIn"><input type="checkbox" id="furiIn">Show furigana</label>
+    <label class="check" for="romaIn"><input type="checkbox" id="romaIn">Show romaji</label>
+    <label for="enIn">English translation<select id="enIn"><option value="auto">Shown until you're comfortable, then on tap</option><option value="always">Always shown</option><option value="tap">Only on tap</option></select></label>
+    <label class="check" for="sceneIn"><input type="checkbox" id="sceneIn">Fetch the line before and after each clip (for Hear the scene, and so Gemini knows the context). Uses about 50 extra Nadeshiko requests per deck.</label>
+    <label for="deckIn">Clips per deck<select id="deckIn"><option value="50">50</option><option value="100">100</option><option value="150">150</option><option value="200">200</option></select></label>
+    <label for="levelIn">Starting level<select id="levelIn"><option value="0">Brand new</option><option value="1">Know the basics</option><option value="2">Intermediate</option></select></label>
+    <label for="ratingIn">Content<select id="ratingIn"><option value="SAFE">Safe only</option><option value="SAFE,SUGGESTIVE">Safe + suggestive</option></select></label>
+    <label for="newSeed">Start a new thread from a word<input id="newSeed" lang="ja" placeholder="e.g. 約束"></label>
+    <button class="ghost" id="seedBtn">Switch thread</button>
+    <label for="keyEdit">Nadeshiko API key<input id="keyEdit" autocomplete="off"></label>
+    <h2>Meanings and breakdowns (optional)</h2>
+    <p style="font-size:13px">Add a Google Gemini key and each deck is sent to Gemini in one request. It returns what each line means in context (with its tone), splits it into chunks, and notes how every verb is conjugated and what each piece of grammar does.</p>
+    <label for="gemKeyIn">Gemini API key<input id="gemKeyIn" type="password" autocomplete="off" placeholder="Paste your Gemini key"></label>
+    <label for="gemModelIn">Gemini model name<input id="gemModelIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. gemini-2.5-flash"></label>
+    <button class="ghost" id="gemTest">Save and translate now</button>
+    <p id="gemStatus" style="font-size:13px"></p>
+    <div id="gemHist" style="font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums"></div>
+    <h2>Backup</h2>
+    <div class="row"><button class="ghost" id="exportBtn">Copy progress</button><button class="ghost" id="importBtn">Paste progress</button></div>
+    <textarea id="ioBox" hidden rows="4" style="font:12px monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px"></textarea>
+    <button class="ghost danger" id="resetBtn">Reset everything</button>
+    <p id="resetConfirm" hidden><button class="ghost danger" id="resetYes">Yes, erase all progress</button></p>
+    <p style="font-size:11px;color:var(--muted)">Version 2026-10-09a</p>
+    <div class="menuBar"><button class="big got" id="doneMenu">Done</button></div>
+  </section>
+</template>
+
+<script>
+/* ---------- built-in beginner core ----------
+   Common spoken words, roughly in the order a beginner meets them in conversation.
+   word|reading|meaning (reading omitted when the word is already kana). */
+const CORE_RAW=`私|わたし|I, me
+これ||this
+それ||that
+ある||to exist (things)
+いる||to exist (people, animals)
+する||to do
+言う|いう|to say
+行く|いく|to go
+来る|くる|to come
+見る|みる|to see, look
+人|ひと|person
+何|なに|what
+今|いま|now
+もう||already, more
+まだ||still, not yet
+ちょっと||a little; hey
+本当|ほんとう|really, true
+大丈夫|だいじょうぶ|OK, all right
+いい||good
+ない||not exist; not
+分かる|わかる|to understand
+思う|おもう|to think
+知る|しる|to know
+お前|おまえ|you (rough)
+あなた||you
+俺|おれ|I (casual, male)
+僕|ぼく|I (boyish)
+君|きみ|you
+こと||thing (abstract)
+もの||thing
+ここ||here
+そこ||there
+どこ||where
+誰|だれ|who
+なぜ||why
+どう||how
+そう||so, like that
+こう||like this
+ああ||ah; like that
+うん||yeah
+はい||yes
+いや||no; nah
+ええ||yes; eh?
+ごめん||sorry
+すみません||excuse me, sorry
+ありがとう||thank you
+お願い|おねがい|please; a request
+待つ|まつ|to wait
+やる||to do (casual)
+なる||to become
+できる||can, be able
+食べる|たべる|to eat
+飲む|のむ|to drink
+帰る|かえる|to go home
+聞く|きく|to hear, ask
+話す|はなす|to speak
+会う|あう|to meet
+持つ|もつ|to hold, have
+使う|つかう|to use
+入る|はいる|to enter
+出る|でる|to leave, come out
+死ぬ|しぬ|to die
+生きる|いきる|to live
+好き|すき|liked, to like
+嫌い|きらい|disliked
+大好き|だいすき|love, really like
+欲しい|ほしい|to want (a thing)
+怖い|こわい|scary
+すごい||amazing
+悪い|わるい|bad
+大きい|おおきい|big
+小さい|ちいさい|small
+新しい|あたらしい|new
+早い|はやい|early, fast
+遅い|おそい|late, slow
+楽しい|たのしい|fun
+嬉しい|うれしい|happy
+悲しい|かなしい|sad
+可愛い|かわいい|cute
+強い|つよい|strong
+弱い|よわい|weak
+変|へん|strange
+大事|だいじ|important, precious
+大切|たいせつ|important, precious
+無理|むり|impossible, no way
+駄目|だめ|no good, not allowed
+本気|ほんき|serious
+一緒|いっしょ|together
+全部|ぜんぶ|all
+みんな||everyone
+自分|じぶん|oneself
+友達|ともだち|friend
+先生|せんせい|teacher
+父|ちち|father
+母|はは|mother
+お父さん|おとうさん|dad
+お母さん|おかあさん|mom
+兄|あに|older brother
+姉|あね|older sister
+子供|こども|child
+家|いえ|house, home
+学校|がっこう|school
+部屋|へや|room
+店|みせ|shop
+町|まち|town
+世界|せかい|world
+国|くに|country
+水|みず|water
+猫|ねこ|cat
+犬|いぬ|dog
+目|め|eye
+手|て|hand
+顔|かお|face
+声|こえ|voice
+心|こころ|heart
+気|き|feeling, spirit
+名前|なまえ|name
+時間|じかん|time
+日|ひ|day
+今日|きょう|today
+明日|あした|tomorrow
+昨日|きのう|yesterday
+朝|あさ|morning
+夜|よる|night
+毎日|まいにち|every day
+話|はなし|story, talk
+問題|もんだい|problem
+仕事|しごと|work, job
+約束|やくそく|promise
+夢|ゆめ|dream
+力|ちから|power, strength
+命|いのち|life
+奴|やつ|guy (rough)
+女|おんな|woman
+男|おとこ|man
+彼|かれ|he; boyfriend
+彼女|かのじょ|she; girlfriend
+様|さま|Mr./Ms. (honorific)
+さん||Mr./Ms.
+ちゃん||(cute name suffix)
+くん||(boy's name suffix)
+一人|ひとり|alone; one person
+二人|ふたり|two people
+少し|すこし|a little
+全然|ぜんぜん|not at all
+とても||very
+すぐ||soon, right away
+また||again
+いつ||when
+いつも||always
+絶対|ぜったい|absolutely
+多分|たぶん|probably
+やっぱり||as expected, after all
+きっと||surely
+ずっと||the whole time
+もっと||more
+一番|いちばん|the most, number one
+別に|べつに|not particularly
+じゃあ||well then
+でも||but
+だから||so, that's why
+それで||and so
+なんで||why (casual)
+どうして||why
+こんな||this kind of
+そんな||that kind of
+あんな||that kind of (over there)
+どんな||what kind of
+考える|かんがえる|to think about
+信じる|しんじる|to believe
+忘れる|わすれる|to forget
+覚える|おぼえる|to remember
+教える|おしえる|to teach, tell
+助ける|たすける|to help, save
+守る|まもる|to protect
+戦う|たたかう|to fight
+勝つ|かつ|to win
+負ける|まける|to lose
+始める|はじめる|to begin
+終わる|おわる|to end
+止める|とめる|to stop
+変わる|かわる|to change
+取る|とる|to take
+置く|おく|to put
+買う|かう|to buy
+作る|つくる|to make
+読む|よむ|to read
+書く|かく|to write
+遊ぶ|あそぶ|to play
+寝る|ねる|to sleep
+起きる|おきる|to wake up
+走る|はしる|to run
+歩く|あるく|to walk
+呼ぶ|よぶ|to call
+答える|こたえる|to answer
+探す|さがす|to look for
+見つける|みつける|to find
+頑張る|がんばる|to do one's best
+諦める|あきらめる|to give up
+困る|こまる|to be troubled
+怒る|おこる|to get angry
+泣く|なく|to cry
+笑う|わらう|to laugh
+感じる|かんじる|to feel
+決める|きめる|to decide
+付き合う|つきあう|to go out with
+殺す|ころす|to kill
+逃げる|にげる|to run away
+違う|ちがう|to differ; that's wrong
+いらっしゃる||to come/be (honorific)
+くれる||to give (to me)
+あげる||to give
+もらう||to receive
+ください||please give
+いく||(going on; after て)
+しまう||to finish; end up
+みる||(try doing; after て)
+おく||(do in advance; after て)
+ほう||direction; rather
+ため||for the sake of
+ところ||place; point
+わけ||reason
+はず||should be, expected
+つもり||intention
+感じ|かんじ|feeling, vibe
+気持ち|きもち|feeling
+大変|たいへん|tough, terrible
+簡単|かんたん|easy
+安心|あんしん|relief
+心配|しんぱい|worry
+平気|へいき|fine, calm
+普通|ふつう|normal
+確か|たしか|certain; I believe
+勝手|かって|selfish; as one pleases
+最高|さいこう|the best
+最後|さいご|the last
+最初|さいしょ|the first
+前|まえ|before, front
+後|あと|after
+上|うえ|above
+下|した|below
+中|なか|inside
+外|そと|outside
+側|そば|beside
+方|かた|person (polite); way of`;
+const CORE=CORE_RAW.trim().split("\n").map((l,i)=>{const [w,r,m]=l.split("|");return {w,r:r||w,m,rank:i}});
+const CORE_BY=new Map(); CORE.forEach(c=>{CORE_BY.set(c.w,c); if(!CORE_BY.has(c.r)) CORE_BY.set(c.r,c)});
+
+/* grammar ladder: what to explain first. Each entry matches a particle/auxiliary dictionary form or an inflection label. */
+const LADDER=[
+ ["は","topic marker: as for ~"],["が","subject marker"],["を","object marker"],["に","to / at / in (target, time)"],
+ ["の","'s, of; also softens a question"],["か","question marker"],["よ","I'm telling you (emphasis)"],["ね","right? (seeking agreement)"],
+ ["も","also, too"],["で","at (place of action); by means of"],["と","and; with; quoting"],["です","is (polite)"],["だ","is (plain)"],
+ ["ます","polite verb ending"],["ない","not (negative)"],["negative","not (negative form)"],["た","past tense"],["past","past tense"],
+ ["て","te-form: and / please / -ing"],["te","te-form: and / please / -ing"],["から","because; from"],["けど","but, although"],
+ ["って","quoting: (they) said; topic 'speaking of'"],["たい","want to ~"],["desire","want to ~"],["ぞ","emphatic (rough)"],["な","don't! / emphasis"],
+ ["まで","until, up to"],["より","than"],["だけ","only"],["しか","nothing but (with negative)"],["ばかり","nothing but; just did"],
+ ["う","let's ~ (volitional)"],["volitional","let's ~ / I'll ~"],["れる","can / be done (potential, passive)"],["potential","can do"],
+ ["passive","be done (passive)"],["られる","can / be done (potential, passive)"],["imperative","command: do it!"],
+ ["たら","if / when (conditional)"],["conditional","if / when (conditional)"],["ば","if (conditional)"],["なら","if it's the case that"],
+ ["ても","even if"],["ながら","while doing"],["そう","looks like; I hear"],["みたい","seems like"],["らしい","apparently"],
+ ["せる","make/let someone do (causative)"],["させる","make/let someone do (causative)"],["causative","make/let someone do"],
+ ["ちゃう","end up doing (casual)"],["てしまう","end up doing; completely"],["なきゃ","have to (casual)"],["のに","even though; if only"]
+];
+const LADDER_BY=new Map(LADDER.map(([k,g],i)=>[k,{g,rank:i}]));
+const POINTS=[];
+
+/* kana → romaji for total beginners */
+const ROMA={"きゃ":"kya","きゅ":"kyu","きょ":"kyo","しゃ":"sha","しゅ":"shu","しょ":"sho","ちゃ":"cha","ちゅ":"chu","ちょ":"cho","にゃ":"nya","にゅ":"nyu","にょ":"nyo","ひゃ":"hya","ひゅ":"hyu","ひょ":"hyo","みゃ":"mya","みゅ":"myu","みょ":"myo","りゃ":"rya","りゅ":"ryu","りょ":"ryo","ぎゃ":"gya","ぎゅ":"gyu","ぎょ":"gyo","じゃ":"ja","じゅ":"ju","じょ":"jo","びゃ":"bya","びゅ":"byu","びょ":"byo","ぴゃ":"pya","ぴゅ":"pyu","ぴょ":"pyo","ちぇ":"che","しぇ":"she","じぇ":"je","ふぁ":"fa","ふぃ":"fi","ふぇ":"fe","ふぉ":"fo","てぃ":"ti","でぃ":"di","うぃ":"wi","うぇ":"we",
+"あ":"a","い":"i","う":"u","え":"e","お":"o","か":"ka","き":"ki","く":"ku","け":"ke","こ":"ko","さ":"sa","し":"shi","す":"su","せ":"se","そ":"so","た":"ta","ち":"chi","つ":"tsu","て":"te","と":"to","な":"na","に":"ni","ぬ":"nu","ね":"ne","の":"no","は":"ha","ひ":"hi","ふ":"fu","へ":"he","ほ":"ho","ま":"ma","み":"mi","む":"mu","め":"me","も":"mo","や":"ya","ゆ":"yu","よ":"yo","ら":"ra","り":"ri","る":"ru","れ":"re","ろ":"ro","わ":"wa","を":"o","ん":"n","が":"ga","ぎ":"gi","ぐ":"gu","げ":"ge","ご":"go","ざ":"za","じ":"ji","ず":"zu","ぜ":"ze","ぞ":"zo","だ":"da","ぢ":"ji","づ":"zu","で":"de","ど":"do","ば":"ba","び":"bi","ぶ":"bu","べ":"be","ぼ":"bo","ぱ":"pa","ぴ":"pi","ぷ":"pu","ぺ":"pe","ぽ":"po","ぁ":"a","ぃ":"i","ぅ":"u","ぇ":"e","ぉ":"o","ゃ":"ya","ゅ":"yu","ょ":"yo","ゔ":"vu"};
+function romaji(h){let o="";for(let i=0;i<h.length;i++){const two=h.slice(i,i+2);
+  if(ROMA[two]){o+=ROMA[two];i++;continue}
+  const c=h[i];
+  if(c==="っ"){const n=ROMA[h.slice(i+1,i+3)]||ROMA[h[i+1]]||"";o+=n?n[0]:"";continue}
+  if(c==="ー"){o+=o.slice(-1);continue}
+  o+=ROMA[c]||c} return o}
+</script>
+<script>
+"use strict";
+const API = "https://api.nadeshiko.co/v1/search";
+const KEY = "chunkfeed.v1";
+const DAY = 864e5;
+
+/* ---------- state ---------- */
+function fresh(){return {apiKey:"",settings:{level:0,furi:true,en:"auto",romaji:false,rating:"SAFE"},
+  items:{}, seen:{}, cands:{}, bad:{}, thread:null, trail:[], days:{}, total:0}}
+let S = load();
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.items){const f=fresh();s.settings=Object.assign(f.settings,s.settings);return Object.assign(f,s)}}catch(e){}return fresh()}
+function save(){
+  // keep the seen-clip list bounded
+  const ids=Object.keys(S.seen); if(ids.length>4000){ids.sort((a,b)=>S.seen[a]-S.seen[b]).slice(0,ids.length-3500).forEach(i=>delete S.seen[i])}
+  const ck=Object.keys(S.cands); if(ck.length>800){ck.sort((a,b)=>S.cands[a]-S.cands[b]).slice(0,ck.length-600).forEach(k=>delete S.cands[k])}
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+}
+const today=()=>new Date().toISOString().slice(0,10);
+
+/* ---------- memory model ----------
+   Each word/grammar item has a stability in days. Recall decays as exp(-elapsed/stability).
+   Nothing is ever "due": fading items just get a higher chance of being woven into the feed. */
+function recall(it){ if(!it||!it.last) return null; return Math.exp(-((Date.now()-it.last)/DAY)/it.s) }
+function item(k,label,reading,init){
+  let it=S.items[k]; if(!it){it=S.items[k]={k,label,reading:reading||"",s:init,last:0,good:0,bad:0}}
+  if(reading&&!it.reading) it.reading=reading; return it }
+function strengthen(it,weight){
+  const r=it.last?recall(it):0.5;
+  it.s=Math.min(365, it.s*(1+weight*(1.2*(1-r)+0.15)) + 0.3*weight);
+  it.good++; it.last=Date.now() }
+function weaken(it,f){ it.s=Math.max(0.25,it.s*f); it.bad++; it.last=Date.now() }
+
+/* ---------- token analysis ---------- */
+const kata2hira=s=>(s||"").replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
+const hasKanji=s=>/[一-龯㐀-䶿々]/.test(s);
+function isContent(t){
+  if(!t||!t.d) return false;
+  if(t.kind==="symbol"||t.kind==="function") return false;
+  if(t.pt!==undefined && (t.pt===""||t.pt==="prt")) return false;
+  if(/^(助詞|助動詞|補助記号|記号|空白)/.test(t.p||"")) return false;
+  return true }
+function analyze(seg){
+  const toks=(seg.textJa&&seg.textJa.tokens)||[];
+  const words=new Map(), grams=new Map();
+  toks.forEach(t=>{
+    if(isContent(t)) words.set("w:"+t.d,{label:t.d,reading:kata2hira(t.r)});
+    if(t.kind==="expression"&&t.d) grams.set("g:"+t.d,{label:t.d});
+    else if(!isContent(t)&&t.d&&t.kind!=="symbol"&&(t.pt==="prt"||/^(助詞|助動詞)/.test(t.p||""))) grams.set("g:"+t.d,{label:t.d});
+    if(t.inflection&&t.inflection.labels) t.inflection.labels.forEach(l=>grams.set("g:"+l,{label:l}));
+  });
+  return {toks,words,grams,text:(seg.textJa&&seg.textJa.content)||""} }
+
+/* ---------- levels ----------
+   0 = brand new, 1 = knows basics, 2 = intermediate. The level only sets the starting assumptions;
+   after that, what you actually understand takes over. */
+const LEVELS=[
+ {name:"Brand new",assume:0,unseen:1,gram:0.4,len:12},
+ {name:"Know the basics",assume:90,unseen:0.8,gram:0.15,len:22},
+ {name:"Intermediate",assume:999,unseen:0.4,gram:0,len:40}];
+const L=()=>LEVELS[S.settings.level||0];
+const coreOf=label=>CORE_BY.get(label);
+function solidCount(){let n=0;for(const k in S.items){const it=S.items[k];if(k[0]==="w"&&it.s>7)n++}return n}
+function maxLen(){return Math.min(44,L().len+Math.floor(solidCount()/8))}
+/* difficulty of a clip: how many things in it are probably new to you */
+function difficulty(a,targetKey){
+  const lv=L(); let d=0;
+  a.words.forEach((v,k)=>{ if(k===targetKey) return; const it=S.items[k];
+    if(!it){ const c=coreOf(v.label); d+= (c&&c.rank<lv.assume)?0:lv.unseen }
+    else { const r=recall(it); if(it.bad>it.good||r<0.45) d+=1 } });
+  a.grams.forEach((v,k)=>{ if(!S.items[k]) d+=lv.gram });
+  return d }
+
+/* ---------- Nadeshiko ---------- */
+/* Nadeshiko limits each key to a short burst of requests plus a monthly allowance,
+   so every call goes through one polite queue, results are kept between visits,
+   and each new clip may spend at most two searches. */
+const CKEY="chunkfeed.cache";
+let cache={}; try{cache=JSON.parse(localStorage.getItem(CKEY))||{}}catch(e){cache={}}
+function saveCache(){
+  const keys=Object.keys(cache).sort((a,b)=>(cache[b].ts||0)-(cache[a].ts||0));
+  keys.slice(30).forEach(k=>delete cache[k]);
+  for(let n=Math.min(30,keys.length);n>0;n=Math.floor(n/2)){
+    try{localStorage.setItem(CKEY,JSON.stringify(cache));return}catch(e){keys.slice(Math.floor(n/2)).forEach(k=>delete cache[k])} } }
+function slim(seg){ // drop fields we never use, to keep the saved cache small
+  return {publicId:seg.publicId,episode:seg.episode,mediaPublicId:seg.mediaPublicId,position:seg.position,
+    textJa:{content:seg.textJa.content,tokens:seg.textJa.tokens||null},textEn:{content:(seg.textEn&&seg.textEn.content)||"",mt:!!(seg.textEn&&seg.textEn.isMachineTranslated)},
+    urls:{imageUrl:seg.urls.imageUrl,audioUrl:seg.urls.audioUrl}} }
+class ApiError extends Error{constructor(kind,o={}){super(kind);this.kind=kind;Object.assign(this,o)}}
+let queue=Promise.resolve(), lastCall=0, recent=[], netBudget=2;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function api(path,init){
+  const run=async()=>{
+    const now=Date.now(); recent=recent.filter(t=>now-t<60000);
+    if(recent.length>=100) await sleep(60000-(now-recent[0])+500);   // stay under the 150-per-minute burst limit
+    const gap=500-(Date.now()-lastCall); if(gap>0) await sleep(gap);
+    if(S.quotaOut&&S.quotaOut>Date.now()) throw new ApiError("quota",{detail:""});
+    const dk=today(); S.calls=S.calls&&S.calls.d===dk?S.calls:{d:dk,n:0};
+    if(S.calls.n>=400) throw new ApiError("daily");   // safety ceiling: a bug can never burn a month of requests
+    S.calls.n++; save();
+    lastCall=Date.now(); recent.push(lastCall);
+    let res;
+    try{ res=await fetch("https://api.nadeshiko.co"+path,Object.assign({},init,{headers:Object.assign({"Authorization":"Bearer "+S.apiKey},init&&init.headers)})) }
+    catch(e){ throw new ApiError("network") }
+    if(res.status===401||res.status===403) throw new ApiError("auth");
+    if(res.status===429){
+      let j={}; try{j=await res.json()}catch(e){}
+      const ra=parseFloat(res.headers.get("Retry-After"));
+      const reason=j.code||res.headers.get("X-RateLimit-Reason")||"";
+      if(/QUOTA/i.test(reason)){ S.quotaOut=Date.now()+15*60e3; save(); throw new ApiError("quota",{detail:[j.code,j.title,j.detail].filter(Boolean).join(" · ")}) }
+      throw new ApiError("burst",{wait:isFinite(ra)?ra:60,detail:[j.code||reason,j.title,j.detail].filter(Boolean).join(" · ")});
+    }
+    if(!res.ok) throw new ApiError("http",{status:res.status});
+    return res.json() };
+  const p=queue.then(run,run); queue=p.catch(()=>{}); return p }
+
+/* clips you flag teach the app which episodes (and eventually shows) have off subtitles or timing */
+function blocked(seg){ const b=S.bad&&S.bad[seg.mediaPublicId]; if(!b) return false;
+  return b.all || (b.eps&&b.eps[seg.episode]>=2) }
+function excludeList(){ const out=[];
+  for(const id in (S.bad||{})){ const b=S.bad[id];
+    if(b.all) out.push({mediaPublicId:id});
+    else { const eps=Object.keys(b.eps||{}).filter(e=>b.eps[e]>=2).map(Number); if(eps.length) out.push({mediaPublicId:id,episodes:eps}) } }
+  return out.slice(0,40) }
+function flagClip(seg){ S.bad=S.bad||{}; const b=S.bad[seg.mediaPublicId]=S.bad[seg.mediaPublicId]||{eps:{},n:0};
+  b.eps[seg.episode]=(b.eps[seg.episode]||0)+1; b.n++; if(b.n>=4) b.all=true; save() }
+async function search(q,free,mlOverride){
+  const ml=mlOverride||maxLen(); let c=cache[q];
+  if(!c) c=cache[q]={segs:[],media:{},cursor:null,done:false,ml};
+  if(c.ml<ml){ c.ml=ml; c.cursor=null; c.done=false }  // you've grown: allow longer clips from here on
+  if(c.done) return c;
+  if(!free){ if(netBudget<=0) throw new ApiError("budget"); netBudget-- }
+  const body={query:{search:q},take:50,sort:{mode:"RANDOM",seed:hash(q)},include:["media"],
+    filters:{contentRating:S.settings.rating.split(","),segmentLengthChars:{min:2,max:ml}}};
+  const ex=excludeList(); if(ex.length) body.filters.media={exclude:ex};
+  if(c.cursor) body.cursor=c.cursor;
+  const j=await api("/v1/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  (j.segments||[]).forEach(sg=>{ if(sg&&sg.textJa&&sg.urls) c.segs.push(slim(sg)) });
+  const md=(j.includes&&j.includes.media)||{};
+  for(const id in md){ const m=md[id]; c.media[id]={nameJa:m.nameJa,nameEn:m.nameEn} }
+  c.cursor=j.pagination&&j.pagination.cursor; c.done=!(j.pagination&&j.pagination.hasMore&&c.cursor);
+  c.ts=Date.now(); if(c.segs.length>150) c.segs=c.segs.slice(-150);
+  saveCache(); return c }
+
+/* pick the most comprehensible unseen clip for a query */
+async function pickClip(q,targetKey,opts={}){
+  for(let page=0;page<2;page++){
+    let c=cache[q];
+    const ml=maxLen(), usable=sg=>!S.seen[sg.publicId]&&!sg._used&&sg.textJa.content.length<=ml&&!blocked(sg);
+    const fresh=c&&c.segs.some(usable);
+    if(!fresh||page>0){ try{ c=await search(q) }catch(e){ if(e.kind==="budget") return null; throw e } }
+    let best=null,bestD=1e9;
+    c.segs.forEach(seg=>{
+      if(!usable(seg)) return;
+      const a=analyze(seg);
+      if(opts.needGram && !a.grams.has(opts.needGram)) return;
+      if(opts.filter && !opts.filter(a)) return;
+      if(opts.minLen && a.text.length<opts.minLen) return;
+      const raw=a.toks.length?difficulty(a,targetKey):1.5; // no word breakdown: usable, just less preferred
+      const mt=seg.textEn&&seg.textEn.mt?(S.settings.level<2?0.9:0.4):0; // prefer human translations
+      const d=Math.abs(raw-0.75)+mt+Math.random()*0.4-(opts.bonus?opts.bonus(a):0); // aim for about one new thing per clip
+      if(d<bestD){bestD=d;best={seg,a,media:c.media[seg.mediaPublicId]}}
+    });
+    if(best){best.seg._used=true;return best}
+    if(c.done) return null;
+  }
+  return null }
+function hash(s){let h=2166136261;for(const ch of s){h^=ch.codePointAt(0);h=Math.imul(h,16777619)}return Math.abs(h)%100000}
+
+/* ---------- the thread: one chunk at a time, built up step by step ----------
+   step 0 anchor: hear the chunk several times
+   step 1 context: same chunk, different scenes
+   step 2 partner: chunk + a word that keeps showing up next to it
+   step 3 grammar: chunk + a grammar form you haven't locked in
+   then the partner (or a frequent neighbour) becomes the next focus. */
+const STEP_NAMES=["first listens","new scenes","with a partner word","with new grammar"];
+function startThread(word){
+  const k="w:"+word; item(k,word,"",1.5);
+  S.thread={focus:k,step:0,n:0,partner:null,gram:null};
+  if(!S.trail.includes(k)) S.trail.push(k); save() }
+function threadReady(){ // has the current step done its job?
+  const t=S.thread, it=S.items[t.focus];
+  const need=[4,5,4,4][t.step];
+  if(planning) return t.n>=need;
+  return t.n>=need && it && it.good>=Math.min(2+t.step,5) }
+function advanceThread(){
+  const t=S.thread;
+  if(t.step<3){ t.step++; t.n=0; if(t.step===2) t.partner=choosePartner(); return }
+  // promote to next focus
+  const next=t.partner||choosePartner();
+  if(next){ S.thread={focus:next,step:0,n:0,partner:null,gram:null}; if(!S.trail.includes(next)) S.trail.push(next) }
+  else { t.step=1; t.n=0 }
+}
+function choosePartner(){
+  // a word that has co-occurred with what you understood, that you don't own yet
+  let best=null,bs=-1;
+  for(const [k,n] of Object.entries(S.cands)){
+    if(S.trail.includes(k)||k[0]==="g") continue;
+    const it=S.items[k]; const strong=it&&it.s>20; if(strong) continue;
+    const label=k.slice(2); if(label.length<2&&!hasKanji(label)) continue;
+    const c=coreOf(label); const coreBonus=(S.settings.level<2&&c)?4*(1-c.rank/CORE.length):0;
+    const sc=Math.min(n,6)+(it?0:0.5)+coreBonus+Math.random(); if(sc>bs){bs=sc;best=k}
+  }
+  if(!best||S.settings.level<2&&!coreOf(best.slice(2))) { const nx=nextCore(); if(nx&&(!best||Math.random()<0.6)) best=nx }
+  return best }
+function nextCore(){ // the earliest core word you don't own yet
+  const lv=L();
+  for(const c of CORE){ const k="w:"+c.w; if(S.trail.includes(k)) continue; if(c.rank<lv.assume&&!S.items[k]) continue;
+    const it=S.items[k]; if(it&&it.s>10) continue; if(c.w.length<2&&!hasKanji(c.w)) continue; return k }
+  return null }
+
+/* ---------- feed planner ---------- */
+/* ---------- what goes into a deck ----------
+   thread  : the current word, step by step (new scenes, partner word, new grammar)
+   grammar : the next point on the child-order ladder, heard in real clips
+   combine : two or three chunks you already know, together in one longer sentence
+   review  : something that's fading, in a fresh clip
+   echo    : an earlier word from the thread
+   Early on it's mostly thread + grammar; the more you know, the more of the deck is combinations. */
+function knownPool(){ return Object.values(S.items).filter(it=>it.last&&it.good>=2&&(recall(it)||0)>=0.5&&it.bad<=it.good&&(it.k[0]==="w"||it.k[0]==="p"||it.k.startsWith("gp:"))) }
+function slotWeights(){
+  const k=knownPool().length;
+  const combine=k<12?0:Math.min(0.4,0.1+k/400);
+  return [["thread",0.38-combine/3],["grammar",0.2],["review",0.17-combine/6],["combine",combine],["echo",0.05]] }
+function pickSlot(){ const w=slotWeights(); let r=Math.random()*w.reduce((a,x)=>a+x[1],0);
+  for(const [k,v] of w){ r-=v; if(r<=0) return k } return "thread" }
+let planI=0;
+function fadingItems(){
+  return Object.values(S.items).filter(it=>it.last&&it.good>0&&(it.k[0]==="w"||it.k[0]==="p"))
+    .map(it=>({it,r:recall(it)})).filter(x=>x.r<0.8).sort((a,b)=>a.r-b.r) }
+/* the grammar point you're on: the earliest one in the ladder that isn't solid yet */
+function currentPoint(){
+  const start=S.settings.level===2?60:S.settings.level===1?20:0;
+  for(const p of POINTS){ if(p.rank<start&&!S.items[p.key]) continue;
+    const it=S.items[p.key]; if(!it||it.good<4||(recall(it)||0)<0.6) return p }
+  return null }
+function formOf(p,n){ return p.forms[n%p.forms.length] }
+async function grammarClip(tries){
+  const p=currentPoint(); if(!p) return null;
+  const it=S.items[p.key]; const n=(it?it.good+it.bad:0)+tries;
+  // particles alone match almost everything, so pair them with something you know when possible
+  let q=formOf(p,n); const pool=knownPool().filter(x=>x.k[0]==="w");
+  const short=q.length<=1;
+  if(short&&pool.length){ const w=pool[Math.floor(Math.random()*pool.length)]; q=w.label+" "+q }
+  const clip=await pickClip(q,p.key,{filter:a=>a.text.includes(formOf(p,n))});
+  if(clip){ clip.why="grammar · "+p.name; clip.target=p.key; clip.gp=p.name }
+  return clip }
+function chunkLabel(it){ if(it.k.startsWith("gp:")){ const p=POINTS.find(x=>x.key===it.k); return p?formOf(p,0):"" } return it.label }
+function inClip(a,it){ // is this known chunk in the clip?
+  if(it.k.startsWith("gp:")) return a.text.includes(chunkLabel(it));
+  return a.words.has(it.k)||a.text.includes(it.label) }
+async function combineClip(){
+  const pool=knownPool(); if(pool.length<4) return null;
+  // one recent or fading chunk + one or two others you know
+  pool.sort((x,y)=>(recall(x)||0)-(recall(y)||0)||y.last-x.last);
+  const A=pool[Math.floor(Math.random()*Math.min(8,pool.length))];
+  const others=pool.filter(x=>x!==A&&!(x.k.startsWith("gp:")&&chunkLabel(x).length<2));
+  const B=others[Math.floor(Math.random()*others.length)]; if(!B) return null;
+  const known=knownPool().length;
+  const minLen=Math.min(26,8+Math.floor(known/15)); // longer sentences as you know more
+  const clip=await pickClip(chunkLabel(A)+" "+chunkLabel(B),A.k,{minLen,
+    filter:a=>inClip(a,A)&&inClip(a,B), bonus:a=>{ let n=0; pool.forEach(it=>{ if(inClip(a,it)) n++ }); return Math.min(n,6)*0.15+Math.min(a.text.length,40)/80 }});
+  if(clip){ clip.why="together · "+A.label+" + "+B.label; clip.target=A.k; clip.combo=[A.k,B.k] }
+  return clip }
+async function nextClip(){
+  netBudget=2;
+  for(let tries=0;tries<4;tries++){
+    const kind=tries===0?pickSlot():(tries===1?"grammar":"thread");
+    let clip=null;
+    if(kind==="review"){
+      const f=fadingItems().slice(0,6); if(f.length){const x=f[Math.floor(Math.random()*f.length)];
+        clip=await pickClip(x.it.label,x.it.k,{bonus:a=>Math.min(a.text.length,40)/100}); if(clip){clip.why="refresh";clip.target=x.it.k}}
+    } else if(kind==="echo"){
+      const old=S.trail.slice(0,-1); if(old.length){const k=old[Math.floor(Math.random()*old.length)];
+        clip=await pickClip(k.slice(2),k,{}); if(clip){clip.why="callback";clip.target=k}}
+    } else if(kind==="grammar") clip=await grammarClip(tries);
+    else if(kind==="combine") clip=await combineClip();
+    if(!clip&&kind!=="grammar") clip=await threadClip();
+    if(clip) return clip;
+  }
+  return null }
+async function threadClip(){
+  if(threadReady()) advanceThread();
+  const t=S.thread; const f=t.focus.slice(2);
+  let clip=null;
+  if(t.step===0) clip=await pickClip(f,t.focus,{seed:hash(f+"anchor")});
+  else if(t.step===1) clip=await pickClip(f,t.focus,{seed:hash(today()+f+t.n)});
+  else if(t.step===2 && t.partner){
+    const p=t.partner.slice(2);
+    clip=await pickClip(f+" "+p,t.focus,{seed:hash(today()+p),filter:a=>(a.words.has(t.partner)||a.text.includes(p))&&(a.words.has(t.focus)||a.text.includes(f))});
+    if(!clip){ t.partner=choosePartner() }
+  } else if(t.step===3){
+    // look for a grammar form you haven't met (or that's weak) inside clips of the focus chunk
+    let c=cache[f]; if(!c||!c.segs.length){ try{ c=await search(f) }catch(e){ if(e.kind!=="budget") throw e; c={segs:[]} } }
+    let best=null,bs=-1;
+    c.segs.forEach(seg=>{ if(S.seen[seg.publicId]||seg._used) return; const a=analyze(seg); if(!a.words.has(t.focus)) return;
+      a.grams.forEach((v,gk)=>{ const it=S.items[gk]; const lad=LADDER_BY.get(gk.slice(2));
+        if(it&&it.s>20) return;
+        const sc=(it?(1-(recall(it)||0)):1.2)+(lad?3*(1-lad.rank/LADDER.length):0); if(sc>bs){bs=sc;best=gk} }) });
+    if(best){ t.gram=best; clip=await pickClip(f,t.focus,{seed:hash(today()+f+"g"),needGram:best}) }
+  }
+  if(!clip) clip=await pickClip(f,t.focus,{seed:hash(today()+f+"x"+t.n+Math.random())});
+  if(clip){ clip.why=["new chunk","new scene","+ partner","+ grammar"][t.step]; clip.target=t.focus; if(t.step===3) clip.gram=t.gram; t.n++ }
+  return clip }
+
+/* ---------- literal translations via Gemini ----------
+   Batches of up to 200 lines go out in one request; Gemini answers with JSON
+   [{i, literal}] and the results are kept so no line is translated twice. */
+const LKEY="chunkfeed.literal2"; try{localStorage.removeItem("chunkfeed.literal")}catch(e){}
+let lit={}; try{lit=JSON.parse(localStorage.getItem(LKEY))||{}}catch(e){lit={}}
+let gemBusy=null, gemBackoff=0, gemLast="", gemLastCall=0, gemFlight=new Set(), gemPending=new Set();
+const GEM_GAP=5000, GEM_MAX_FLIGHT=2, AHEAD=150;
+function saveLit(){ const ks=Object.keys(lit); if(ks.length>3000) ks.slice(0,ks.length-2500).forEach(k=>delete lit[k]);
+  try{localStorage.setItem(LKEY,JSON.stringify(lit))}catch(e){} }
+function gemReady(){ return !!(S.gemKey&&S.gemModel) }
+function gemStatus(){ if(!gemReady()) return "Off. Add a key and a model name to turn it on.";
+  return gemLast||("On. "+Object.keys(lit).length+" lines translated so far.") }
+function gemQueue(){ // the clips you're about to see first, then the rest of what's already fetched
+  const out=[], seen=new Set(), add=sg=>{ if(sg&&!lit[sg.publicId]&&!gemPending.has(sg.publicId)&&!seen.has(sg.publicId)){seen.add(sg.publicId);out.push(sg)} };
+  if(current) add(current.seg); buffer.forEach(b=>add(b.seg));
+  for(const q in cache) cache[q].segs.forEach(sg=>{ if(!S.seen[sg.publicId]) add(sg) });
+  return out.slice(0,gemSize()) }
+function gemSize(){ return Math.min(120,Math.max(20,S.gemBatch||60)) }
+/* chunk ranges for a clip, from Gemini's segmentation, located in the original text */
+const CH_PREFIX={word:"w:",grammar:"g:",phrase:"p:"};
+function chunkKey(ch){ const base=(ch.base||ch.t||"").trim(); if(!base) return null;
+  if(ch.kind==="grammar") return "g:"+base.replace(/^[〜~～]/,"");
+  return (CH_PREFIX[ch.kind]||"p:")+base }
+function chunksOf(seg){
+  const L=lit[seg.publicId]; if(!L||!L.c) return [];
+  const text=seg.textJa.content; let from=0; const out=[];
+  L.c.forEach(([t,base,kind,gloss,note])=>{ if(!t) return; const b=text.indexOf(t,from); if(b<0) return;
+    const ch={t,base,kind,gloss,note:note||"",b,e:b+t.length}; ch.key=chunkKey(ch); if(ch.key){out.push(ch); from=ch.e} });
+  return out }
+function ready2(sg){ const L=lit[sg.publicId]; return !!(L&&L.v===2) }
+function gemPump(){} // translation now happens once per deck (see translateSegs)
+function gemPromptFor(lines){
+  return "You are helping a Japanese learner UNDERSTAND spoken Japanese from anime and drama, not translate it word by word.\n"+
+    "For each line return:\n"+
+    "- meaning: what the speaker means here, as natural English that carries the intent and feeling, under 15 words. "+
+    "Start with a short tone tag in square brackets, e.g. [surprised, let down] You're leaving already?!\n"+
+    "- chunks: the line split, in order, into the pieces a learner should hear as units. Each chunk has:\n"+
+    "  t: the exact text as it appears in the line (together the chunks cover the line except punctuation);\n"+
+    "  base: dictionary form for a word (帰る), the general pattern for grammar (〜ちまう, 〜のか, 〜よ), or the phrase itself for a set phrase;\n"+
+    "  kind: \"word\", \"grammar\" or \"phrase\" (phrase = fixed expression like 何なんだ, いいから, どうしよう);\n"+
+    "  gloss: what this piece contributes HERE, under 8 words;\n"+
+    "  note: for any conjugated verb or adjective, show how it is built from the dictionary form and what each step adds, "+
+    "e.g. \"帰る → 帰って (te-form) + ちまう (casual てしまう: 'go and…', regret)\"; for grammar, what it does in this sentence "+
+    "(e.g. \"のか: question asking for an explanation, here surprise\"); name casual or dialect forms with their standard form; "+
+    "empty string when there is nothing to add.\n"+
+    "Keep a conjugated verb together with its endings when they form one meaning (帰っちまう) and explain the endings in the note. "+
+    "Split off particles and sentence endings a learner must notice (のか, よ, ね).\n"+
+    "Some lines come with \"before\" and \"after\": the lines spoken just before and after it in the same scene. Use them only "+
+    "to understand who is talking to whom and what is going on; explain and split only the \"ja\" line itself.\n"+
+    "Return only JSON: an array with one object per line: {\"i\", \"meaning\", \"chunks\"}.\n\n"+
+    JSON.stringify(lines) }
+const GEM_SCHEMA={type:"ARRAY",items:{type:"OBJECT",properties:{i:{type:"INTEGER"},meaning:{type:"STRING"},
+  chunks:{type:"ARRAY",items:{type:"OBJECT",properties:{t:{type:"STRING"},base:{type:"STRING"},kind:{type:"STRING",enum:["word","grammar","phrase"]},gloss:{type:"STRING"},note:{type:"STRING"}},required:["t","base","kind","gloss","note"]}}},
+  required:["i","meaning","chunks"]}};
+/* ONE request for a whole batch of lines. Returns how many came back usable, and whether the answer was cut off. */
+async function gemCall(batch,retried){
+  const dk=today(); S.gemDay=S.gemDay&&S.gemDay.d===dk?S.gemDay:{d:dk,n:0};
+  if(S.gemDay.n>=400){ gemLast="Reached today's 400 Gemini requests. Translations resume tomorrow."; return {n:0,err:true} }
+  const gap=gemLastCall+3000-Date.now(); if(gap>0) await sleep(gap);
+  gemLastCall=Date.now(); S.gemDay.n++; save();
+  const lines=batch.map((sg,i)=>{ const x=ctx[sg.publicId]||{}; const o={i,ja:sg.textJa.content};
+    if(x.b) o.before=x.b.textJa.content; if(x.a) o.after=x.a.textJa.content; return o });
+  const url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(S.gemModel)+":generateContent";
+  let res;
+  try{ res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":S.gemKey},
+      body:JSON.stringify({contents:[{role:"user",parts:[{text:gemPromptFor(lines)}]}],
+        generationConfig:Object.assign({temperature:0.2,responseMimeType:"application/json",responseSchema:GEM_SCHEMA},
+          S.gemNoMax?{}:{maxOutputTokens:65536})})}) }
+  catch(e){ gemLast="Couldn't reach Gemini. Check the key and model name."; return {n:0,err:true} }
+  if(!res.ok){ let msg="", wait=0; try{const j=await res.json(); msg=(j.error&&j.error.message)||"";
+      (j.error&&j.error.details||[]).forEach(d=>{ const m=/([\d.]+)s/.exec(d.retryDelay||""); if(m) wait=parseFloat(m[1])*1000 }) }catch(e){}
+    gemLast="Gemini error "+res.status+(msg?": "+msg:"");
+    gemLog({sent:batch.length,got:0,why:"error "+res.status+(msg?": "+msg.slice(0,120):"")});
+    if(res.status===400&&/max_?output_?tokens/i.test(msg)&&!S.gemNoMax){ S.gemNoMax=true; save(); return gemCall(batch,retried) } // this model has a lower cap
+    if(res.status===429&&!retried&&wait<=65000){ await sleep(Math.max(wait,20000)); return gemCall(batch,true) } // wait as asked, once
+    return {n:0,err:true} }
+  const j=await res.json();
+  const cand=(j.candidates||[])[0]||{};
+  const txt=((cand.content||{}).parts||[]).map(p=>p.text||"").join("");
+  let arr; try{arr=JSON.parse(txt)}catch(e){ gemLog({sent:batch.length,got:0,why:"answer not valid JSON ("+(cand.finishReason||"no reason given")+")"}); return {n:0,cut:true} }
+  if(arr&&!Array.isArray(arr)&&typeof arr==="object") arr=Object.values(arr).find(Array.isArray)||[];
+  let n=0; (Array.isArray(arr)?arr:[]).forEach(o=>{ const sg=batch[o&&o.i]; const m=o&&(o.meaning||o.literal);
+    if(!sg||typeof m!=="string"||!m.trim()) return;
+    const c=(Array.isArray(o.chunks)?o.chunks:[]).filter(x=>x&&x.t).slice(0,24).map(x=>[String(x.t),String(x.base||x.t),["word","grammar","phrase"].includes(x.kind)?x.kind:"phrase",String(x.gloss||"").slice(0,60),String(x.note||"").slice(0,200)]);
+    lit[sg.publicId]={l:m.trim(),c,v:2}; n++ });
+  saveLit();
+  gemLog({sent:batch.length,got:n,why:cand.finishReason||""});
+  return {n,cut:cand.finishReason==="MAX_TOKENS"||n<batch.length} }
+function gemLog(o){ S.gemHist=(S.gemHist||[]).concat([Object.assign({t:new Date().toLocaleTimeString()},o)]).slice(-6); save() }
+/* Translate a whole deck: everything in one request (up to 200 lines). Only if Gemini's answer
+   gets cut off is the remainder split in two and sent again. */
+async function translateSegs(segs){
+  if(!gemReady()) return;
+  let groups=[], todo=segs.filter(sg=>sg&&!ready2(sg));
+  const per=Math.max(10,Math.min(200,S.gemMax||200)); // the most lines this model has managed in one answer
+  for(let i=0;i<todo.length;i+=per) groups.push(todo.slice(i,i+per));
+  for(let round=0;round<3&&groups.length;round++){
+    const results=await Promise.all(groups.map(g=>gemCall(g)));
+    const next=[];
+    results.forEach((r,i)=>{ const left=groups[i].filter(sg=>!lit[sg.publicId]);
+      if(r.cut&&!r.err){ S.gemCutAt=Math.min(S.gemCutAt||999,groups[i].length); S.gemMax=Math.max(10,Math.min(S.gemMax||200,Math.ceil(groups[i].length/2))) }
+      else if(!r.err&&!left.length&&groups[i].length>=(S.gemMax||200)) S.gemMax=Math.min(200,(S.gemMax||200)+10,(S.gemCutAt||999)-5); // grow, but stay under the size that broke
+      if(!left.length||r.err) return;
+      if(left.length>=8){ const h=Math.ceil(left.length/2); next.push(left.slice(0,h),left.slice(h)) } else next.push(left) });
+    groups=next }
+  const done=segs.filter(sg=>sg&&lit[sg.publicId]).length;
+  if(!/error|Couldn't|Reached/.test(gemLast)||done===segs.length) gemLast="On. Last deck: "+done+" of "+segs.length+" clips translated. "+Object.keys(lit).length+" saved in total." }
+function gemTranslate(){ // "Save and translate now": the rest of the current deck
+  if(gemBusy) return gemBusy;
+  const segs=[current&&current.seg,...buffer.map(b=>b.seg)].filter(Boolean);
+  gemBusy=translateSegs(segs).finally(()=>{ gemBusy=null; if(current) showLiteral(current) }); return gemBusy }
+function showLiteral(c){ const el=document.getElementById("litLine"); if(!el||current!==c||!el.dataset.ok) return;
+  const t=lit[c.seg.publicId]; const s2=t&&t.v===2&&t.l;
+  if(s2){ el.hidden=false; el.classList.remove("wait"); el.querySelector("span").textContent=s2; return }
+  if(!gemReady()) return;
+  el.hidden=false; el.classList.add("wait");
+  el.querySelector("span").textContent=gemBusy?"translating…":(gemLast&&!/^On\./.test(gemLast)?gemLast:"not translated yet") }
+
+/* ---------- UI ---------- */
+const $=id=>document.getElementById(id);
+const stage=$("stage");
+let current=null, buffer=[], filling=null, marked=new Set(), replays=0, audio=null;
+
+function headerUpdate(){
+  const c=current;
+  $("focusLbl").textContent=c&&c.target?(c.target[0]==="g"?"〜":"")+c.target.slice(2):"…";
+  $("stepLbl").textContent=(c?({new:"new",again:"again, new scene",review:"review"}[c.why]||""):"")+" · "+knownCount()+" known";
+  $("todayN").textContent=S.days[today()]||0 }
+
+const QKEY="chunkfeed.queue", APP_VERSION="2026-10-09a";
+function saveQueue(){ try{ const pack=c=>c&&{seg:c.seg,media:c.media,why:c.why,target:c.target,gram:c.gram,gp:c.gp,combo:c.combo};
+  localStorage.setItem(QKEY,JSON.stringify({v:APP_VERSION,cur:pack(current),buf:buffer.map(pack),next:nextDeck&&nextDeck.map(pack)})) }catch(e){} }
+function loadQueue(){ try{ const q=JSON.parse(localStorage.getItem(QKEY)); if(!q) return;
+  if(q.v!==APP_VERSION) return; // decks prepared by an older version: build fresh ones so new features show up
+  const un=o=>o&&o.seg&&!S.seen[o.seg.publicId]?Object.assign(o,{a:analyze(o.seg)}):null;
+  buffer=(q.buf||[]).map(un).filter(Boolean); const c=un(q.cur); if(c) buffer.unshift(c);
+  if(q.next){ nextDeck=q.next.map(un).filter(Boolean); if(!nextDeck.length) nextDeck=null }
+  buffer.concat(nextDeck||[]).forEach(b=>{ for(const k in cache) cache[k].segs.forEach(sg=>{ if(sg.publicId===b.seg.publicId) sg._used=true }) }) }catch(e){} }
+/* ================= strict i+1 =================
+   You know only what this app has taught you. Every clip is broken into units: each word
+   (dictionary form), each particle or auxiliary, and each conjugation step. Names and
+   punctuation don't count. A NEW card has exactly one unit you haven't been taught; an AGAIN or
+   REVIEW card has none. */
+const unitMemo=new Map();
+function isName(t){ return /proper|name|人名|地名|固有/i.test((t.posLabel||"")+" "+(t.pt||"")+" "+(t.p||"")) }
+function isFree(t){ return !t||!t.d||t.kind==="symbol"||/^(補助記号|記号|空白)/.test(t.p||"")||isName(t)||/^[\s\p{P}\p{S}ー〜]+$/u.test(t.s||t.d) }
+function unitLabel(k){ const x=k.slice(2); const l=LADDER_BY.get(x); return l?x:x }
+function unitsOf(seg){
+  let u=unitMemo.get(seg.publicId); if(u) return u;
+  const toks=seg.textJa&&seg.textJa.tokens;
+  if(!toks||!toks.length){ u={ok:false,set:new Set(),spans:[]}; unitMemo.set(seg.publicId,u); return u }
+  const set=new Set(), spans=[];
+  toks.forEach(t=>{ if(isFree(t)) return;
+    const keys=[];
+    if(t.kind==="expression") keys.push("g:"+t.d);
+    else if(isContent(t)) keys.push("w:"+t.d);
+    else keys.push("g:"+t.d);
+    ((t.inflection&&t.inflection.labels)||[]).forEach(l=>keys.push("g:"+l));
+    keys.forEach(k=>{ set.add(k); spans.push({k,b:t.b,e:t.e,r:kata2hira(t.r||"")}) }) });
+  u={ok:true,set,spans}; unitMemo.set(seg.publicId,u); return u }
+const isKnown=k=>{ const it=S.items[k]; return !!(it&&it.known) };
+function knownCount(){ let n=0; for(const k in S.items) if(S.items[k].known) n++; return n }
+function newUnits(seg,assumed){ const u=unitsOf(seg); if(!u.ok) return null;
+  const out=[]; u.set.forEach(k=>{ if(!isKnown(k)&&!assumed.has(k)) out.push(k) }); return out }
+function poolSegs(){ const out=[], ids=new Set();
+  for(const q in cache){ const c=cache[q]; c.segs.forEach(sg=>{ if(ids.has(sg.publicId)||S.seen[sg.publicId]||sg._used||blocked(sg)) return;
+    ids.add(sg.publicId); out.push({seg:sg,media:c.media[sg.mediaPublicId]}) }) }
+  return out }
+function coreRank(k){ const c=k[0]==="w"?coreOf(k.slice(2)):null; if(c) return c.rank;
+  const l=LADDER_BY.get(k.slice(2)); return l?l.rank*4:CORE.length }
+/* where to look for more sentences: words you just learned (to find what they combine with),
+   then the next common words you haven't met */
+function nextQueries(assumed){
+  const recent=Object.values(S.items).filter(it=>it.known&&it.k[0]==="w").sort((a,b)=>(b.learnedAt||0)-(a.learnedAt||0)).slice(0,12).map(it=>it.label);
+  [...assumed].filter(k=>k[0]==="w").forEach(k=>recent.unshift(k.slice(2)));
+  const fresh=CORE.filter(c=>!isKnown("w:"+c.w)&&!assumed.has("w:"+c.w)).slice(0,12).map(c=>c.w);
+  const seeds=(S.seedWords||[]).filter(w=>!isKnown("w:"+w));
+  const out=[]; const n=Math.max(recent.length,fresh.length);
+  seeds.forEach(w=>out.push(w));
+  for(let i=0;i<n;i++){ if(fresh[i]) out.push(fresh[i]); if(recent[i]) out.push(recent[i]) }
+  return [...new Set(out)].filter(q=>!(cache[q]&&cache[q].done)) }
+function maxLenStrict(assumed){ return Math.min(44,8+knownCount()+assumed.size) }
+let deckSearches=0;
+async function growPool(assumed){
+  if(deckSearches>=30) return false;
+  const qs=nextQueries(assumed); if(!qs.length) return false;
+  const q=qs[deckSearches%Math.min(qs.length,6)];
+  deckSearches++; netBudget=1;
+  try{ await search(q,false,maxLenStrict(assumed)) }catch(e){ if(e.kind==="budget") return true; throw e }
+  return true }
+function score(seg,assumed){ // prefer clean subtitles, and longer sentences once you know more
+  const mt=seg.textEn&&seg.textEn.mt?0.6:0;
+  return -mt+Math.min(seg.textJa.content.length,40)/40*Math.min(1,(knownCount()+assumed.size)/30)+Math.random()*0.3 }
+/* plan one deck. "assumed" = what earlier cards (this deck and the one you're on) are about to teach */
+async function planDeck(size,assumed){
+  const deck=[]; const again=[]; deckSearches=0; let stuck=0;
+  const take=(x,kind,target,extra)=>{ x.seg._used=true; const c=Object.assign({seg:x.seg,media:x.media,a:analyze(x.seg),why:kind,target},extra||{}); deck.push(c);
+    setDeckStatus("Picking clips: "+deck.length+" of "+size); return c };
+  while(deck.length<size&&stuck<40){
+    const pool=poolSegs(); let placed=false;
+    // 1. reinforce something just introduced, in a different scene (nothing new in it)
+    const due=again.find(g=>deck.length>=g.at);
+    const usedText=new Set(deck.map(c=>c.seg.textJa.content));
+    if(due){ const opts=pool.filter(x=>{ const n=newUnits(x.seg,assumed); return n&&n.length===0&&unitsOf(x.seg).set.has(due.k)&&!usedText.has(x.seg.textJa.content) });
+      if(opts.length){ opts.sort((a,b)=>score(b.seg,assumed)-score(a.seg,assumed)); take(opts[0],"again",due.k); placed=true }
+      due.left--; due.at=deck.length+3; if(due.left<=0||!opts.length) again.splice(again.indexOf(due),1) }
+    // 2. every fourth card: something you're starting to forget, in a fresh clip
+    if(!placed&&deck.length%4===3){ const fad=fadingItems().filter(x=>x.it.known).slice(0,8);
+      for(const f of fad){ const opts=pool.filter(x=>{ const n=newUnits(x.seg,assumed); return n&&n.length===0&&unitsOf(x.seg).set.has(f.it.k)&&!usedText.has(x.seg.textJa.content) });
+        if(opts.length){ opts.sort((a,b)=>score(b.seg,assumed)-score(a.seg,assumed)); take(opts[0],"review",f.it.k); placed=true; break } } }
+    // 3. a new card: exactly one thing you haven't been taught
+    if(!placed){ const byUnit=new Map();
+      pool.forEach(x=>{ const n=newUnits(x.seg,assumed); if(n&&n.length===1){ const k=n[0]; if(!byUnit.has(k)) byUnit.set(k,[]); byUnit.get(k).push(x) } });
+      if(byUnit.size){
+        // most useful first: common words and basic grammar, and things with plenty of examples to practise on
+        let best=null,bs=-1e9;
+        byUnit.forEach((xs,k)=>{ const sc=Math.min(xs.length,6)*0.5-coreRank(k)/80+(k[0]==="w"?0.2:0); if(sc>bs){bs=sc;best=k} });
+        const xs=byUnit.get(best).sort((a,b)=>a.seg.textJa.content.length-b.seg.textJa.content.length); // simplest example first
+        take(xs[0],"new",best,{newUnit:best}); assumed.add(best); again.push({k:best,at:deck.length+1,left:2}); placed=true } }
+    if(!placed){ const grew=await growPool(assumed);
+      if(!grew){ // nothing new findable right now: practise what you know instead of stopping
+        const opts=pool.filter(x=>{ const n=newUnits(x.seg,assumed); return n&&n.length===0&&!usedText.has(x.seg.textJa.content) });
+        if(!opts.length) break;
+        opts.sort((a,b)=>score(b.seg,assumed)-score(a.seg,assumed));
+        const x=opts[0], ks=[...unitsOf(x.seg).set].sort((a,b)=>((S.items[b]||{}).learnedAt||0)-((S.items[a]||{}).learnedAt||0));
+        take(x,"review",ks[0]||null) }
+      stuck++ }
+  }
+  return deck }
+
+/* ---------- decks ----------
+   Cards come in decks of 50 picked by the learning logic (new chunks from your thread, fading
+   words woven back in, each clip aimed at about one new thing). A deck is fully fetched and
+   translated before you see it, and the next deck is built while you work through this one. */
+/* the line before and after each clip, fetched while a deck is built */
+const XKEY="chunkfeed.ctx";
+let ctx={}; try{ctx=JSON.parse(localStorage.getItem(XKEY))||{}}catch(e){ctx={}}
+function saveCtx(){ const ks=Object.keys(ctx); if(ks.length>1500) ks.slice(0,ks.length-1200).forEach(k=>delete ctx[k]);
+  try{localStorage.setItem(XKEY,JSON.stringify(ctx))}catch(e){} }
+function ctxSlim(sg){ return sg&&{publicId:sg.publicId,position:sg.position,textJa:{content:sg.textJa.content},
+  textEn:{content:(sg.textEn&&sg.textEn.content)||""},urls:{audioUrl:sg.urls.audioUrl}} }
+async function fetchCtx(seg){
+  if(ctx[seg.publicId]!==undefined) return;
+  try{ const j=await api("/v1/media/segments/"+encodeURIComponent(seg.publicId)+"/context?take=1",{method:"GET"});
+    const all=(j.segments||[]).filter(x=>x&&x.publicId!==seg.publicId&&x.textJa&&x.urls);
+    const pos=seg.position;
+    const before=all.filter(x=>pos==null||x.position<pos).sort((a,b)=>b.position-a.position)[0];
+    const after=all.filter(x=>pos==null||x.position>pos).sort((a,b)=>a.position-b.position)[0];
+    ctx[seg.publicId]={b:ctxSlim(before)||null,a:ctxSlim(after&&after!==before?after:null)||null};
+  }catch(e){ if(e.kind==="daily"||e.kind==="quota"||e.kind==="auth") throw e; ctx[seg.publicId]={b:null,a:null} }
+}
+let skipGem=false, planning=false, nextDeck=null, deckBuilding=null, deckStatus="", deckGen=0;
+const deckSize=()=>S.settings.deck||50;
+function setDeckStatus(t){ deckStatus=t; const el=document.getElementById("deckStatus"); if(el) el.textContent=t }
+async function buildDeck(){
+  const size=deckSize(); let deck=[], err=null;
+  const assumed=new Set(); [current,...buffer].forEach(c=>{ if(c&&c.newUnit) assumed.add(c.newUnit) });
+  planning=true;
+  try{ deck=await planDeck(size,assumed) }catch(e){ err=e } finally{ planning=false }
+  if(!deck.length&&err) throw err;
+  if(S.settings.scene!==false){ let k=0;
+    for(const c of deck){ k++; if(ctx[c.seg.publicId]===undefined){ setDeckStatus("Fetching the lines around each clip: "+k+" of "+deck.length);
+        try{ await fetchCtx(c.seg) }catch(e){ break } } }
+    saveCtx() }
+  if(gemReady()){ setDeckStatus("Translating all "+deck.length+" clips in one request…"); await translateSegs(deck.map(c=>c.seg));
+    if(deck.some(c=>!ready2(c.seg))){ await sleep(15000); setDeckStatus("Finishing the last translations…"); await translateSegs(deck.map(c=>c.seg)) } }
+  setDeckStatus("");
+  return deck }
+function ensureNextDeck(){
+  if(nextDeck||deckBuilding) return deckBuilding||Promise.resolve(nextDeck);
+  const gen=deckGen;
+  deckBuilding=buildDeck().then(d=>{ if(gen===deckGen){ nextDeck=d; saveQueue() } return d })
+    .finally(()=>{ deckBuilding=null });
+  deckBuilding.catch(()=>{});
+  return deckBuilding }
+function resetDecks(){ deckGen++; buffer=[]; nextDeck=null; saveQueue() }
+function preload(c){ const i=new Image(); i.src=c.seg.urls.imageUrl; const a=new Audio(); a.preload="auto"; a.src=c.seg.urls.audioUrl }
+
+function errorText(e){
+  const k=e&&(e.kind||e.message);
+  if(k==="auth") return "Nadeshiko didn't accept that API key. Open the menu (☰), check the key, and try again.";
+  if(k==="quota") return "Nadeshiko says this account is out of requests for the month. Pausing for 15 minutes. If your usage page shows requests left, send this to the developer: "+(e.detail||"no details given");
+  if(k==="daily") return "That's 400 Nadeshiko requests today, the app's own safety limit, so your monthly allowance lasts. It starts again tomorrow.";
+  if(k==="burst") return "Nadeshiko keeps saying slow down. Wait a few minutes, then try again. ("+(e.detail||"no details")+")";
+  if(k==="network") return "Couldn't reach Nadeshiko. Check your connection and try again.";
+  return "Nadeshiko returned an error ("+(e.status||k)+"). Try again in a moment."
+}
+
+let retryTimer=null, autoResumes=0;
+async function showNext(){
+  menuOpen=false; stage.classList.remove("menuOpen");
+  headerUpdate(); clearInterval(retryTimer);
+  if(!buffer.length&&!nextDeck){
+    stage.innerHTML='<div class="loading"><p>Getting your next '+deckSize()+' clips ready. This is the only wait; the deck after this one is prepared while you listen.</p><p id="deckStatus"></p></div>';
+    setDeckStatus(deckStatus||"Starting…");
+    try{ for(let k=0;k<3&&!buffer.length&&!nextDeck;k++) await ensureNextDeck() }catch(e){
+      if(e.kind==="burst"){ let left=Math.ceil(Math.max(5,e.wait||60));
+        stage.innerHTML='<div class="panel"><p>Nadeshiko asked us to slow down. Picking up again in <b id="cd"></b> seconds.</p></div>';
+        $("cd").textContent=left;
+        retryTimer=setInterval(()=>{ left--; const el=$("cd"); if(el) el.textContent=left; if(left<=0){clearInterval(retryTimer);showNext()} },1000);
+        return }
+      stage.innerHTML='<div class="panel"><p class="err"></p><button class="big got" id="retry">Try again</button></div>';
+      stage.querySelector(".err").textContent=errorText(e); $("retry").onclick=showNext; return } }
+  if(!buffer.length&&nextDeck){ buffer=nextDeck; nextDeck=null }
+  if(gemReady()&&!skipGem&&buffer.length&&!ready2(buffer[0].seg)){
+    // e.g. cards saved by an older version, or a deck whose translation failed: fix them before showing anything
+    const segs=buffer.concat(nextDeck||[]).map(c=>c.seg).filter(sg=>!ready2(sg));
+    stage.innerHTML='<div class="loading"><p>Translating '+segs.length+' clips in one request…</p></div>';
+    await translateSegs(segs);
+    if(!ready2(buffer[0].seg)){
+      stage.innerHTML='<div class="panel"><p class="err"></p><button class="big got" id="retry">Try again</button><button class="ghost" id="noGem">Continue without translations for now</button></div>';
+      stage.querySelector(".err").textContent="Gemini didn't translate these clips. "+(gemLast&&!/^On\./.test(gemLast)?gemLast:"Open ☰ to see what it sent back.");
+      $("retry").onclick=showNext; $("noGem").onclick=()=>{skipGem=true;showNext()}; return } }
+  current=buffer.shift(); saveQueue();
+  if(!current){ stage.innerHTML='<div class="panel"><p>Couldn\'t find fitting clips for this chunk yet.</p><button class="big got" id="retry">Look again</button><p>Or switch to another starting word in the menu (☰).</p></div>'; $("retry").onclick=showNext; return }
+  render(current); headerUpdate(); buffer.slice(0,2).forEach(preload);
+  ensureNextDeck(); // the next deck starts building right away
+}
+
+function newThingText(c,chunks){ // "先生 「せんせい」 teacher" / "〜よ  telling (emphasis)"
+  const k=c.target, x=k.slice(2), sp=unitsOf(c.seg).spans.find(y=>y.k===k);
+  const ch=sp&&chunks.find(q=>q.b<sp.e&&q.e>sp.b);
+  if(k[0]==="w"){ const cw=coreOf(x); const rd=(cw&&cw.r)||(sp&&sp.r)||"";
+    return x+(rd&&rd!==x?" 「"+rd+"」":"")+"  "+((cw&&cw.m)||(ch&&ch.gloss)||"") }
+  const l=LADDER_BY.get(x);
+  return "〜"+x+"  "+((l&&l.g)||(ch&&(ch.note||ch.gloss))||"grammar") }
+function render(c,silent){
+  if(!silent){ marked=new Set(); replays=0 }
+  const seg=c.seg, a=c.a, m=c.media||{};
+  const card=document.createElement("article"); card.className="card";
+  card.innerHTML=`<div class="shot"><img alt=""><span class="why"></span><div class="src"></div></div>
+   <div class="listen" hidden><button class="playbig" aria-label="Play again">▶</button><button class="showtext">Show text</button></div>
+   <div class="body"><div class="jp" lang="ja"></div><div class="roma" hidden></div><div class="explain" hidden></div><div class="gloss"></div>
+   <div class="row2"><button class="reveal">Show meaning</button><button class="bdBtn" hidden>Breakdown</button><button class="bdBtn sceneBtn" hidden>Hear the scene</button></div>
+   <div class="breakdown" hidden></div>
+   <div class="scene" hidden></div>
+   <div class="lit" id="litLine" hidden><b>Meaning</b> <span></span></div><div class="en" hidden></div></div>`;
+  card.querySelector("img").src=seg.urls.imageUrl;
+  card.querySelector(".why").textContent={new:"new",again:"again",review:"review"}[c.why]||c.why||"";
+  card.querySelector(".src").textContent=[m.nameJa||m.nameEn||"",seg.episode?"ep "+seg.episode:""].filter(Boolean).join(" · ");
+  const jp=card.querySelector(".jp"), text=seg.textJa.content;
+  const gpP=c.gp?POINTS.find(x=>x.name===c.gp):null;
+  const targetLabel=c.target?(gpP?formOf(gpP,0):c.target.slice(2)):"";
+  const chunks=chunksOf(seg); let ci=0, cur=null;
+  const U=unitsOf(seg);
+  const unitsIn=(b,e)=>[...new Set(U.spans.filter(x=>x.b<e&&x.e>b).map(x=>x.k))];
+  const toggle=(keys,el)=>{ if(!keys.length) return; const on=!keys.every(k=>marked.has(k));
+    keys.forEach(k=>on?marked.add(k):marked.delete(k)); el.classList.toggle("marked",on) };
+  const glossBox=card.querySelector(".gloss");
+  function showGloss(head,meaning,lookup){ glossBox.innerHTML=""; glossBox.append(head+(meaning?"  "+meaning:"")+"  ");
+    const l=document.createElement("a"); l.href="https://jisho.org/search/"+encodeURIComponent(lookup); l.target="_blank"; l.rel="noopener"; l.textContent="look up"; glossBox.append(l) }
+  function holder(pos){ // the chunk span that owns this character, if any
+    while(ci<chunks.length&&chunks[ci].e<=pos){ci++;cur=null}
+    if(ci<chunks.length&&chunks[ci].b<=pos){ if(!cur){ const ch=chunks[ci]; cur=document.createElement("span"); cur.className="ch";
+        const ks=unitsIn(ch.b,ch.e);
+        if(c.target&&ks.includes(c.target)&&c.why==="new") cur.classList.add("hit");
+        if(ks.length&&ks.every(k=>marked.has(k))) cur.classList.add("marked");
+        cur.classList.add("k-"+ch.kind); if(ch.note) cur.classList.add("hasNote");
+        cur.onclick=()=>{ toggle(ks,cur2);
+          showGloss(ch.t+(ch.base&&ch.base!==ch.t?" → "+ch.base:""),ch.gloss+(ch.note?" — "+ch.note:""),ch.base.replace(/^[〜~～]/,"")) };
+        const cur2=cur; jp.append(cur) } return cur }
+    return jp }
+  let pos=0;
+  const toks=a.toks.length?a.toks.slice().sort((x,y)=>x.b-y.b):chunks.map(ch=>({s:ch.t,d:"",b:ch.b,e:ch.e,kind:"symbol"}));
+  toks.forEach(t=>{
+    if(t.b>pos) holder(pos).append(text.slice(pos,t.b));
+    if(t.b<pos) return;
+    const sp=document.createElement("span"); sp.className="t";
+    const surf=text.slice(t.b,t.e)||t.s;
+    if(S.settings.furi&&hasKanji(surf)&&t.r){ const r=document.createElement("ruby"); r.append(surf); const rt=document.createElement("rt"); rt.textContent=kata2hira(t.r); r.append(rt); sp.append(r) }
+    else sp.textContent=surf;
+    const tks=unitsIn(t.b,t.e);
+    if(!chunks.length&&tks.length){ sp.classList.add("c");
+      if(c.target&&tks.includes(c.target)&&c.why==="new") sp.classList.add("hit");
+      if(tks.every(k=>marked.has(k))) sp.classList.add("marked");
+      sp.onclick=()=>{ toggle(tks,sp);
+        const g=card.querySelector(".gloss"); g.innerHTML="";
+        const cw=coreOf(t.d);
+        g.append(t.d+"  「"+kata2hira(t.r)+"」"+(cw?"  "+cw.m:(t.posLabel?"  "+t.posLabel:""))+"  ");
+        const l=document.createElement("a"); l.href="https://jisho.org/search/"+encodeURIComponent(t.d); l.target="_blank"; l.rel="noopener"; l.textContent="look up";
+        g.append(l) } }
+    holder(t.b).append(sp); pos=t.e });
+  if(pos<text.length) holder(pos).append(text.slice(pos));
+  if(S.settings.romaji){ const ro=card.querySelector(".roma"); ro.hidden=false;
+    ro.textContent=a.toks.slice().sort((x,y)=>x.b-y.b).filter(t=>t.kind!=="symbol"&&t.r).map(t=>romaji(kata2hira(t.r))).join(" ") }
+  // explain the one new thing in this clip, while it's still new to you
+  const ex=card.querySelector(".explain"), lines=[];
+  const tIt=c.target&&S.items[c.target];
+  const tok=a.toks.find(t=>t.d===targetLabel);
+  if(c.target&&tok&&(!tIt||tIt.good<4||tIt.bad>=tIt.good)){ const cw=coreOf(targetLabel);
+    const rd=cw?cw.r:(tok?kata2hira(tok.r):""); if(cw||S.settings.level<2) lines.push([targetLabel+(rd&&rd!==targetLabel?"  「"+rd+"」":""),cw?cw.m:((tIt&&tIt.gloss)||"tap it for a dictionary link")]) }
+  const gk=(c.gram&&a.grams.has(c.gram))?c.gram:null;
+  const gList=gk?[gk]:(S.settings.level<2?[...a.grams.keys()].filter(k=>LADDER_BY.has(k.slice(2))&&!(S.items[k]&&S.items[k].good>=3)).slice(0,1):[]);
+  gList.forEach(k=>{const l=LADDER_BY.get(k.slice(2)); if(l) lines.push(["〜"+k.slice(2),l.g])});
+  if(chunks.length){ lines.length=0;
+    const fresh=chunks.filter(ch=>{const it=S.items[ch.key]; return ch.key===c.target||ch.base===targetLabel||!it||it.good<3||it.bad>=it.good})
+      .sort((x,y)=>((y.key===c.target||y.base===targetLabel)-(x.key===c.target||x.base===targetLabel))||((x.kind==="word")-(y.kind==="word")));
+    const lim=S.settings.level<2?2:1;
+    fresh.slice(0,lim).forEach(ch=>lines.push([(ch.kind==="grammar"&&!/^[〜~～]/.test(ch.base)?"〜":"")+ch.base,ch.gloss+(ch.note?" — "+ch.note:"")]));
+  }
+  if(c.why==="new"&&c.target){ lines.length=0; lines.push(["New",newThingText(c,chunks)]) }
+  else if(c.why!=="new") lines.length=0;
+  if(S.settings.explain===false) lines.length=0;
+  if(lines.length){ ex.hidden=false; lines.forEach(([h,g])=>{const d=document.createElement("div");const b=document.createElement("b");b.textContent=h;const sp=document.createElement("span");sp.textContent="  "+g;d.append(b,sp);ex.append(d)}) }
+  // the line before and after: hidden until asked for
+  const X=ctx[seg.publicId], scBtn=card.querySelector(".sceneBtn"), sc=card.querySelector(".scene");
+  if(X&&(X.b||X.a)){ scBtn.hidden=false;
+    const lineRow=(sg,label,isMain)=>{ const r=document.createElement("button"); r.className="scLine"+(isMain?" main":"");
+      const l=document.createElement("small"); l.textContent=label; const j=document.createElement("span"); j.lang="ja"; j.textContent=sg.textJa.content;
+      r.append(l,j); if(sg.textEn&&sg.textEn.content&&c.enShown){ const e=document.createElement("em"); e.textContent=sg.textEn.content; r.append(e) }
+      r.onclick=()=>{ replays+=isMain?1:0; play(sg.urls.audioUrl) }; return r };
+    const openScene=()=>{ sc.replaceChildren(); if(X.b) sc.append(lineRow(X.b,"before",false));
+      sc.append(lineRow(seg,"this clip",true)); if(X.a) sc.append(lineRow(X.a,"after",false));
+      sc.hidden=false; c.sceneOpen=true; scBtn.textContent="Play the scene again" };
+    scBtn.onclick=()=>{ openScene(); playChain([X.b,seg,X.a].filter(Boolean).map(x=>x.urls.audioUrl)) };
+    if(c.sceneOpen) openScene() }
+  const en=card.querySelector(".en"); en.textContent=(gemReady()&&!skipGem?"Subtitle: ":"")+((seg.textEn&&seg.textEn.content)||"(no translation)");
+  // breakdown: every chunk with what it does here and how it is built
+  const bd=card.querySelector(".breakdown"), bdBtn=card.querySelector(".bdBtn");
+  if(chunks.length){ bdBtn.hidden=false;
+    chunks.forEach(ch=>{ const row=document.createElement("div"); row.className="bdRow k-"+ch.kind;
+      const h=document.createElement("b"); h.textContent=ch.t; const g=document.createElement("span"); g.textContent=(ch.base&&ch.base!==ch.t?ch.base+" · ":"")+ch.gloss;
+      row.append(h,g); if(ch.note){ const n=document.createElement("small"); n.textContent=ch.note; row.append(n) } bd.append(row) });
+    bdBtn.onclick=()=>{ bd.hidden=!bd.hidden; c.bdOpen=!bd.hidden; bdBtn.textContent=bd.hidden?"Breakdown":"Hide breakdown" };
+    if(c.bdOpen){ bd.hidden=false; bdBtn.textContent="Hide breakdown" } }
+  if(seg.textEn&&seg.textEn.mt){ const tg=document.createElement("span"); tg.className="mt"; tg.textContent="machine translation"; en.append(" ",tg) }
+  const lt=card.querySelector(".lit");
+  const rv=card.querySelector(".body .reveal"); rv.onclick=()=>{en.hidden=false;rv.hidden=true;c.peeked=true;c.enShown=true;lt.dataset.ok="1";showLiteral(c); if(c.sceneOpen) render(c,true)};
+  if(c.enShown){en.hidden=false;rv.hidden=true;lt.dataset.ok="1"} // stays open if the card redraws
+  const enMode=S.settings.en||"auto";
+  if(enMode==="always"||(enMode==="auto"&&solidCount()<80&&S.settings.level===0)){en.hidden=false;rv.hidden=true;lt.dataset.ok="1"}
+  const ctr=document.createElement("div"); ctr.className="controls";
+  ctr.innerHTML='<button class="big lost">Lost me</button><button class="replay" aria-label="Replay">↻</button><button class="big got">Got it</button>';
+  const hint=document.createElement("div"); hint.className="hint";
+  hint.append(c.why==="new"?"One new thing here. Got it = you understood the line. Tap anything you didn't know first. ":
+    "Nothing new here. Got it = you understood it. Tap anything you'd forgotten. ");
+  if(c.why==="new"){ const ak=document.createElement("button"); ak.className="flag"; ak.textContent="Already know it";
+    ak.onclick=()=>answer(true,true); hint.append(ak," · ") }
+  const fl=document.createElement("button"); fl.className="flag"; fl.textContent="Bad clip?";
+  fl.onclick=()=>{ flagClip(seg); S.seen[seg.publicId]=Date.now(); save(); showNext() };
+  hint.append(fl);
+  stage.replaceChildren(card,ctr,hint);
+  ctr.querySelector(".lost").onclick=()=>answer(false);
+  ctr.querySelector(".got").onclick=()=>answer(true);
+  ctr.querySelector(".replay").onclick=()=>{replays++;play(seg.urls.audioUrl)};
+  card.querySelector(".shot").onclick=()=>{replays++;play(seg.urls.audioUrl)};
+  if(S.settings.audioOnly&&!c.textShown){
+    card.querySelector(".shot").hidden=true; card.querySelector(".body").hidden=true;
+    const ls=card.querySelector(".listen"); ls.hidden=false;
+    ls.querySelector(".playbig").onclick=()=>{replays++;play(seg.urls.audioUrl)};
+    ls.querySelector(".showtext").onclick=()=>{ c.textShown=true; c.peeked=true; render(c,true) };
+    hint.firstChild.textContent="Listen, then answer. ";
+  }
+  if(!silent) play(seg.urls.audioUrl);
+  showLiteral(c);
+}
+function playChain(urls){ // play the lines one after another, as in the show
+  try{ if(audio) audio.pause() }catch(e){}
+  let i=0; const next=()=>{ if(i>=urls.length) return; audio=new Audio(urls[i++]); audio.onended=next; audio.play().catch(()=>{}) }; next() }
+function play(url){ try{ if(audio){audio.pause()} audio=new Audio(url); audio.play().catch(()=>{}) }catch(e){} }
+
+function answer(ok,already){
+  const c=current; if(!c) return;
+  S.seen[c.seg.publicId]=Date.now(); S.total++; S.days[today()]=(S.days[today()]||0)+1;
+  const u=unitsOf(c.seg), ease=(c.peeked?0.7:1)*(replays>2?0.8:1);
+  const touch=(k,init)=>{ const sp=u.spans.find(x=>x.k===k); return item(k,k.slice(2),sp?sp.r:"",init) };
+  if(already&&c.target){ const it=touch(c.target,8); it.known=true; it.learnedAt=Date.now(); strengthen(it,1) }
+  else{
+    // anything you tapped: not known (any more)
+    marked.forEach(k=>{ const it=touch(k,1); it.known=false; weaken(it,0.35) });
+    u.set.forEach(k=>{ if(marked.has(k)) return; const it=touch(k,2);
+      if(k===c.target){
+        if(ok){ if(!it.known){ it.known=true; it.learnedAt=Date.now() } strengthen(it,ease) }
+        else if(c.why==="new"){ it.known=false; weaken(it,0.5) }
+        else weaken(it,0.6) }                     // a review you missed: comes back sooner
+      else if(ok&&it.known) strengthen(it,0.3*ease) });
+    if(c.why==="new"&&!ok&&c.target){ // didn't land: drop later cards that lean on it, re-plan the next deck
+      buffer=buffer.filter(b=>!unitsOf(b.seg).set.has(c.target)); deckGen++; nextDeck=null; saveQueue() }
+    if(marked.size){ buffer=buffer.filter(b=>![...marked].some(k=>unitsOf(b.seg).set.has(k))); deckGen++; nextDeck=null; saveQueue() }
+  }
+  if(c.why==="new"&&c.target) S.lastNew=c.target;
+  save(); showNext() }
+
+/* ---------- screens ---------- */
+function setup(){
+  $("hdr").hidden=true;
+  stage.replaceChildren(document.getElementById("tplSetup").content.cloneNode(true));
+  if(S.apiKey) $("keyIn").value=S.apiKey;
+  let lvl=S.settings.level||0;
+  const seeds=[["猫","水","友達","名前","家"],["約束","仕事","夢","世界"],["諦める","気持ち","普通","勝手"]];
+  const pick=l=>{lvl=l; document.querySelectorAll("#levelPick button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.l===l)));
+    const sd=seeds[l]; $("seedIn").value=sd[Math.floor(Math.random()*sd.length)]; $("romaIn0").closest("label").hidden=l>0};
+  document.querySelectorAll("#levelPick button").forEach(b=>b.onclick=()=>pick(+b.dataset.l));
+  pick(lvl);
+  $("startBtn").onclick=async()=>{
+    const k=$("keyIn").value.trim(), w=$("seedIn").value.trim();
+    if(!k||!w){ const e=$("setupErr"); e.hidden=false; e.textContent="Add your API key and a starting word."; return }
+    if(k!==S.apiKey) S.quotaOut=0;
+    S.apiKey=k; S.settings.level=lvl; S.settings.furi=lvl<2; S.settings.romaji=lvl===0&&$("romaIn0").checked;
+    S.seedWords=[w]; startThread(w); $("hdr").hidden=false; showNext() } }
+
+let menuOpen=false;
+function menu(){
+  if(menuOpen){ const b=$("closeMenu"); if(b){ b.click(); return } }
+  menuOpen=true; stage.classList.add("menuOpen");
+  if(audio) audio.pause();
+  stage.replaceChildren(document.getElementById("tplMenu").content.cloneNode(true)); stage.scrollTop=0;
+  const its=Object.values(S.items).filter(i=>i.k[0]==="w"&&i.last);
+  $("sKnown").textContent=knownCount();
+  const fad=fadingItems(); $("sWeak").textContent=fad.length; $("sTotal").textContent=S.total;
+  const chip=(txt,cls)=>{const s=document.createElement("span");s.textContent=txt;if(cls)s.className=cls;return s};
+  S.trail.forEach(k=>$("trail").append(chip(k.slice(2))));
+  if(!fad.length) $("fading").append(chip("Nothing fading yet"));
+  fad.slice(0,24).forEach(x=>$("fading").append(chip(x.it.label,"weak")));
+  api("/v1/user/me",{method:"GET"}).then(j=>{const q=j&&j.quota; const el=$("quotaLine");
+    if(q&&el) el.textContent="Nadeshiko requests left this month: "+q.remaining+" of "+q.limit}).catch(()=>{});
+  $("furiIn").checked=S.settings.furi; $("romaIn").checked=S.settings.romaji; $("enIn").value=S.settings.en||"auto"; $("levelIn").value=String(S.settings.level||0); $("ratingIn").value=S.settings.rating; $("keyEdit").value=S.apiKey;
+  $("furiIn").onchange=e=>{S.settings.furi=e.target.checked;save()};
+  $("sceneIn").checked=S.settings.scene!==false; $("sceneIn").onchange=e=>{S.settings.scene=e.target.checked;save()};
+  $("deckIn").value=String(deckSize()); $("deckIn").onchange=e=>{S.settings.deck=+e.target.value;save()};
+  $("audioIn").checked=!!S.settings.audioOnly; $("explIn").checked=S.settings.explain!==false;
+  $("audioIn").onchange=e=>{S.settings.audioOnly=e.target.checked;save()};
+  $("explIn").onchange=e=>{S.settings.explain=e.target.checked;save()};
+  $("romaIn").onchange=e=>{S.settings.romaji=e.target.checked;save()};
+  $("enIn").onchange=e=>{S.settings.en=e.target.value;save()};
+  $("levelIn").onchange=e=>{S.settings.level=+e.target.value;resetDecks();save()};
+  $("ratingIn").onchange=e=>{S.settings.rating=e.target.value;for(const k in cache)delete cache[k];resetDecks();save()};
+  $("gemKeyIn").value=S.gemKey||""; $("gemModelIn").value=S.gemModel||"";
+  $("gemStatus").textContent=gemStatus();
+  (S.gemHist||[]).slice().reverse().forEach(h=>{ const d=document.createElement("div"); d.textContent=h.t+"  sent "+h.sent+", got back "+h.got+(h.why?"  ("+h.why+")":""); $("gemHist").append(d) });
+  $("gemTest").onclick=async()=>{ S.gemKey=$("gemKeyIn").value.trim(); S.gemModel=$("gemModelIn").value.trim().replace(/^models\//,""); gemBackoff=0; gemLast=""; save();
+    if(!gemReady()){ $("gemStatus").textContent=gemStatus(); return }
+    $("gemStatus").textContent="Asking Gemini…"; const p=gemTranslate(); if(p) await p;
+    $("gemStatus").textContent=gemLast||(gemQueue().length?gemStatus():"Nothing waiting to translate yet. Play a clip first.") };
+  $("gemKeyIn").onchange=e=>{S.gemKey=e.target.value.trim();gemBackoff=0;save();$("gemStatus").textContent=gemStatus()};
+  $("gemModelIn").onchange=e=>{S.gemModel=e.target.value.trim().replace(/^models\//,"");gemBackoff=0;save();$("gemStatus").textContent=gemStatus()};
+  $("keyEdit").onchange=e=>{S.apiKey=e.target.value.trim();S.quotaOut=0;S.calls=null;save()};
+  $("seedBtn").onclick=()=>{const w=$("newSeed").value.trim(); if(!w) return; S.seedWords=[w]; startThread(w); resetDecks(); current=null; showNext()};
+  $("exportBtn").onclick=async()=>{const box=$("ioBox"),d=JSON.stringify(Object.assign({},S,{apiKey:"",gemKey:""})); box.hidden=false; box.value=d;
+    try{await navigator.clipboard.writeText(d);$("exportBtn").textContent="Copied"}catch(e){box.select()}};
+  $("importBtn").onclick=()=>{const box=$("ioBox"); if(box.hidden||!box.value){box.hidden=false;box.value="";box.placeholder="Paste a backup here, then tap Paste progress again";return}
+    try{const d=JSON.parse(box.value); if(!d.items) throw 0; const key=S.apiKey,gk=S.gemKey,gm=S.gemModel; S=Object.assign(fresh(),d); S.apiKey=key; S.gemKey=gk; S.gemModel=gm||d.gemModel; save(); $("importBtn").textContent="Restored"; resetDecks()}catch(e){$("importBtn").textContent="That backup didn't parse"}};
+  $("resetBtn").onclick=()=>{$("resetConfirm").hidden=false};
+  $("resetYes").onclick=()=>{const key=S.apiKey,gk=S.gemKey,gm=S.gemModel; S=fresh(); S.apiKey=key; S.gemKey=gk; S.gemModel=gm; save(); try{localStorage.removeItem(LKEY);localStorage.removeItem(QKEY)}catch(e){} lit={}; resetDecks(); current=null; setup()};
+  $("doneMenu").onclick=()=>$("closeMenu").click();
+  $("closeMenu").onclick=()=>{ menuOpen=false; stage.classList.remove("menuOpen"); stage.scrollTop=0;
+    const gk=$("gemKeyIn").value.trim(), gm=$("gemModelIn").value.trim().replace(/^models\//,"");
+    if(gk!==(S.gemKey||"")||gm!==(S.gemModel||"")){ S.gemKey=gk; S.gemModel=gm; gemBackoff=0; gemLast=""; save() }
+    gemPump();
+    if(!S.thread) return setup(); if(current){render(current);headerUpdate()} else showNext() };
+}
+$("menuBtn").onclick=menu;
+
+if(!S.apiKey||!S.thread) setup(); else { $("hdr").hidden=false; loadQueue(); showNext() }
+</script>
+</body>
+</html>
